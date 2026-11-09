@@ -3601,11 +3601,11 @@ Read the team config to discover your teammates' names. Check the task list peri
       return wrapMessagesInSystemReminder([
         createUserMessage({
           content:
-            `PDF file: ${attachment.filename} (${attachment.pageCount} pages, ${formatFileSize(attachment.fileSize)}). ` +
-            `This PDF is too large to read all at once. You MUST use the ${FILE_READ_TOOL_NAME} tool with the pages parameter ` +
-            `to read specific page ranges (e.g., pages: "1-5"). Do NOT call ${FILE_READ_TOOL_NAME} without the pages parameter ` +
-            `or it will fail. Start by reading the first few pages to understand the structure, then read more as needed. ` +
-            `Maximum 20 pages per request.`,
+            `The user attached a local PDF file: ${attachment.filename} (${attachment.pageCount} pages, ${formatFileSize(attachment.fileSize)}). ` +
+            `Do NOT attach or forward this PDF as a document/file payload. Read it locally using the ${FILE_READ_TOOL_NAME} tool ` +
+            `with the pages parameter and bounded ranges (for example, pages: "1-5"). Do NOT call ${FILE_READ_TOOL_NAME} ` +
+            `without the pages parameter. Page ranges are extracted locally and returned as image content for analysis. ` +
+            `Start with the first few pages, then read further ranges as needed. Maximum 20 pages per request.`,
           isMeta: true,
         }),
       ])
