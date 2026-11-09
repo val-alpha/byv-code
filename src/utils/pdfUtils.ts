@@ -1,4 +1,5 @@
 import { getMainLoopModel } from './model/model.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from './model/providers.js'
 
 // Document extensions that are handled specially
 export const DOCUMENT_EXTENSIONS = new Set(['pdf'])
@@ -50,14 +51,29 @@ export function parsePDFPageRange(
 }
 
 /**
- * Check if PDF reading is supported with the current model.
- * PDF document blocks work on all providers (1P, Vertex, Bedrock, Foundry).
- * Haiku 3 is the only remaining model that predates PDF support; users on
- * it fall back to the page-extraction path (poppler-utils). Substring match
- * covers all provider ID formats (Bedrock prefixes, Vertex @-dates).
+ * Check whether the current model AND API route support native PDF document blocks.
+ *
+ * Custom Anthropic-compatible gateways (for example, OpenRouter) are not assumed
+ * to implement Anthropic's document parsing path. Those routes use the local
+ * page-extraction workflow instead, which sends ordinary image blocks.
  */
 export function isPDFSupported(): boolean {
-  return !getMainLoopModel().toLowerCase().includes('claude-3-haiku')
+  if (getMainLoopModel().toLowerCase().includes('claude-3-haiku')) {
+    return false
+  }
+
+  const provider = getAPIProvider()
+  if (provider === 'openai') {
+    return false
+  }
+
+  // The default provider can also target a third-party Anthropic-compatible URL.
+  // Only the official Anthropic host is treated as supporting native PDF blocks.
+  if (provider === 'firstParty' && !isFirstPartyAnthropicBaseUrl()) {
+    return false
+  }
+
+  return true
 }
 
 /**
