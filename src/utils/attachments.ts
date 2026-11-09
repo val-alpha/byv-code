@@ -224,7 +224,7 @@ import {
   type InstructionsMemoryType,
 } from './hooks.js'
 import { jsonStringify } from './slowOperations.js'
-import { isPDFExtension } from './pdfUtils.js'
+import { isPDFExtension, isPDFSupported } from './pdfUtils.js'
 import { getLocalISODate } from '../constants/common.js'
 import { getPDFPageCount } from './pdf.js'
 import { PDF_AT_MENTION_INLINE_THRESHOLD } from '../constants/apiLimits.js'
@@ -2979,9 +2979,9 @@ export async function* getAttachmentMessages(
  * @returns A new_file attachment or null if the file couldn't be read
  */
 /**
- * Check if a PDF file should be represented as a lightweight reference
- * instead of being inlined. Returns a PDFReferenceAttachment for large PDFs
- * (more than PDF_AT_MENTION_INLINE_THRESHOLD pages), or null otherwise.
+ * Use a lightweight local reference for large PDFs and for routes that do not
+ * support native PDF document blocks. The model then reads bounded page ranges
+ * through FileReadTool, which extracts pages locally as ordinary images.
  */
 export async function tryGetPDFReference(
   filename: string,
@@ -2991,13 +2991,17 @@ export async function tryGetPDFReference(
     return null
   }
   try {
+    const requiresLocalPageExtraction = !isPDFSupported()
     const [stats, pageCount] = await Promise.all([
       getFsImplementation().stat(filename),
       getPDFPageCount(filename),
     ])
     // Use page count if available, otherwise fall back to size heuristic (~100KB per page)
     const effectivePageCount = pageCount ?? Math.ceil(stats.size / (100 * 1024))
-    if (effectivePageCount > PDF_AT_MENTION_INLINE_THRESHOLD) {
+    if (
+      requiresLocalPageExtraction ||
+      effectivePageCount > PDF_AT_MENTION_INLINE_THRESHOLD
+    ) {
       logEvent('tengu_pdf_reference_attachment', {
         pageCount: effectivePageCount,
         fileSize: stats.size,
